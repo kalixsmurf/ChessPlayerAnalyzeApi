@@ -697,6 +697,12 @@ def analyze_all_custom_players():
 
 # Routes for Custom Analysis
 
+@app.route("/", methods=["GET"])
+def healthcheck():
+    return jsonify({
+        "Status": "Working"
+    }) 
+
 @app.route("/api/custom", methods=["GET"])
 def get_custom_analysis():
     """
