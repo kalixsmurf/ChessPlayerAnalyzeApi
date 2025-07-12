@@ -5,3 +5,4 @@ pandas==2.2.2
 beautifulsoup4==4.12.3
 geopy==2.4.1
 pyexcel==0.7.0
+gunicorn==23.0.0

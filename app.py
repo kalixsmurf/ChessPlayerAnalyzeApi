@@ -1360,4 +1360,3 @@ def get_tournaments():
 if __name__ == "__main__":
     initialize_custom_players()
     print("Players initialized")
-    app.run(debug=True, port=5000)
