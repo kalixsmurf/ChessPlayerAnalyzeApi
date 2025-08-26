@@ -1,4 +1,3 @@
-import threading
 from io import BytesIO
 import requests
 import pandas as pd
@@ -8,7 +7,11 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
+import threading
 import time
+import copy
+from threading import Lock
+
 # For XLS -> XLSX conversion
 from pyexcel import get_book
 
@@ -20,518 +23,575 @@ CORS(app)
 STATIC_PLAYERS = [
     {
         "id": 1,
-        "surname": "abicic",
-        "given_name": "josip",
-        "fide_number": "14599619",
-        "raw_fullname": "Josip Abicic"
+        "surname": "durak",
+        "given_name": "can",
+        "fide_number": "",
+        "raw_fullname": "Can Durak"
     },
     {
         "id": 2,
-        "surname": "agic",
-        "given_name": "zejn",
-        "fide_number": "16510437",
-        "raw_fullname": "Zejn Agic"
+        "surname": "hüseyi̇noğlu",
+        "given_name": "ali̇han",
+        "fide_number": "",
+        "raw_fullname": "Ali̇han Hüseyi̇noğlu"
     },
     {
         "id": 3,
-        "surname": "barbaric",
-        "given_name": "matija",
-        "fide_number": "79305326",
-        "raw_fullname": "Matija Barbaric"
+        "surname": "mammadov",
+        "given_name": "sadi̇g",
+        "fide_number": "",
+        "raw_fullname": "Sadi̇g Mammadov"
     },
     {
         "id": 4,
-        "surname": "belin",
-        "given_name": "anton",
-        "fide_number": "34610952",
-        "raw_fullname": "Anton Belin"
+        "surname": "poormosavi̇",
+        "given_name": "seyed ki̇an",
+        "fide_number": "",
+        "raw_fullname": "Seyed Ki̇an Poormosavi̇"
     },
     {
         "id": 5,
-        "surname": "belyaletdinov",
-        "given_name": "leonard",
-        "fide_number": "14641771",
-        "raw_fullname": "Leonard Belyaletdinov"
+        "surname": "mukhammadali̇",
+        "given_name": "abdurakhmonov",
+        "fide_number": "",
+        "raw_fullname": "Abdurakhmonov Mukhammadali̇"
     },
     {
         "id": 6,
-        "surname": "brzezina",
-        "given_name": "pawel",
-        "fide_number": "21078866",
-        "raw_fullname": "Pawel Brzezina"
+        "surname": "schekachi̇khi̇n",
+        "given_name": "maksi̇m",
+        "fide_number": "",
+        "raw_fullname": "Maksi̇m Schekachi̇khi̇n"
     },
     {
         "id": 7,
-        "surname": "buklaho",
-        "given_name": "ignacy",
-        "fide_number": "21088373",
-        "raw_fullname": "Ignacy Buklaho"
+        "surname": "özsakallioğlu",
+        "given_name": "okan",
+        "fide_number": "",
+        "raw_fullname": "Okan Özsakallioğlu"
     },
     {
         "id": 8,
-        "surname": "busic",
-        "given_name": "mateo",
-        "fide_number": "14439590",
-        "raw_fullname": "Mateo Busic"
+        "surname": "kamer",
+        "given_name": "kayra",
+        "fide_number": "",
+        "raw_fullname": "Kayra Kamer"
     },
     {
         "id": 9,
-        "surname": "cazacu",
-        "given_name": "iustin-nicolas",
-        "fide_number": "42206367",
-        "raw_fullname": "Iustin-Nicolas Cazacu"
+        "surname": "bagaturov",
+        "given_name": "gi̇orgi̇",
+        "fide_number": "",
+        "raw_fullname": "Gi̇orgi̇ Bagaturov"
     },
     {
         "id": 10,
-        "surname": "celebi",
-        "given_name": "mehmet alper",
-        "fide_number": "51603934",
-        "raw_fullname": "Mehmet Alper Celebi"
+        "surname": "darban",
+        "given_name": "morteza",
+        "fide_number": "",
+        "raw_fullname": "Morteza Darban"
     },
     {
         "id": 11,
-        "surname": "cominotto",
-        "given_name": "mauro",
-        "fide_number": "54800004",
-        "raw_fullname": "Mauro Cominotto"
+        "surname": "engi̇n",
+        "given_name": "onur çinar",
+        "fide_number": "",
+        "raw_fullname": "Onur Çinar Engi̇n"
     },
     {
         "id": 12,
-        "surname": "contala",
-        "given_name": "noel",
-        "fide_number": "14671212",
-        "raw_fullname": "Noel Contala"
+        "surname": "ilgaz",
+        "given_name": "yusuf kerem",
+        "fide_number": "",
+        "raw_fullname": "Yusuf Kerem Ilgaz"
     },
     {
         "id": 13,
-        "surname": "ejsymont",
-        "given_name": "eryk",
-        "fide_number": "21089779",
-        "raw_fullname": "Eryk Ejsymont"
+        "surname": "shoaat",
+        "given_name": "ghane",
+        "fide_number": "",
+        "raw_fullname": "Ghane Shoaat"
     },
     {
         "id": 14,
-        "surname": "esmer",
-        "given_name": "hamza",
-        "fide_number": "4007484",
-        "raw_fullname": "Hamza Esmer"
+        "surname": "emi̇nov",
+        "given_name": "orkhan",
+        "fide_number": "",
+        "raw_fullname": "Orkhan Emi̇nov"
     },
     {
         "id": 15,
-        "surname": "farkash",
-        "given_name": "denys",
-        "fide_number": "34178449",
-        "raw_fullname": "Denys Farkash"
+        "surname": "odeev",
+        "given_name": "handszar",
+        "fide_number": "",
+        "raw_fullname": "Handszar Odeev"
     },
     {
         "id": 16,
-        "surname": "friscic",
-        "given_name": "jakov",
-        "fide_number": "14587017",
-        "raw_fullname": "Jakov Friscic"
+        "surname": "di̇ri̇kolu",
+        "given_name": "deni̇z",
+        "fide_number": "",
+        "raw_fullname": "Deni̇z Di̇ri̇kolu"
     },
     {
         "id": 17,
-        "surname": "gazic",
-        "given_name": "petar",
-        "fide_number": "14430185",
-        "raw_fullname": "Petar Gazic"
+        "surname": "yazici",
+        "given_name": "uğur doğa",
+        "fide_number": "",
+        "raw_fullname": "Uğur Doğa Yazici"
     },
     {
         "id": 18,
-        "surname": "gokce",
-        "given_name": "alperen",
-        "fide_number": "51697548",
-        "raw_fullname": "Alperen Gokce"
+        "surname": "özen",
+        "given_name": "metehan",
+        "fide_number": "",
+        "raw_fullname": "Metehan Özen"
     },
     {
         "id": 19,
-        "surname": "guo",
-        "given_name": "johnny",
-        "fide_number": "4007573",
-        "raw_fullname": "Johnny Guo"
+        "surname": "primbetov",
+        "given_name": "kazbek",
+        "fide_number": "",
+        "raw_fullname": "Kazbek Primbetov"
     },
     {
         "id": 20,
-        "surname": "hanas",
-        "given_name": "markiyan",
-        "fide_number": "34184040",
-        "raw_fullname": "Markiyan Hanas"
+        "surname": "can",
+        "given_name": "meli̇h kaan",
+        "fide_number": "",
+        "raw_fullname": "Meli̇h Kaan Can"
     },
     {
         "id": 21,
-        "surname": "hegedus",
-        "given_name": "bernat",
-        "fide_number": "17012732",
-        "raw_fullname": "Bernat Hegedus"
+        "surname": "tezcan",
+        "given_name": "alper",
+        "fide_number": "",
+        "raw_fullname": "Alper Tezcan"
     },
     {
         "id": 22,
-        "surname": "holiga",
-        "given_name": "benjamin",
-        "fide_number": "79315127",
-        "raw_fullname": "Benjamin Holiga"
+        "surname": "umarov",
+        "given_name": "bekhruz",
+        "fide_number": "",
+        "raw_fullname": "Bekhruz Umarov"
     },
     {
         "id": 23,
-        "surname": "ilko-toth",
-        "given_name": "andras",
-        "fide_number": "17018234",
-        "raw_fullname": "Andras Ilko-Toth"
+        "surname": "nazari̇an",
+        "given_name": "arash",
+        "fide_number": "",
+        "raw_fullname": "Arash Nazari̇an"
     },
     {
         "id": 24,
-        "surname": "ivanovic",
-        "given_name": "leonid",
-        "fide_number": "921451",
-        "raw_fullname": "Leonid Ivanovic"
+        "surname": "karademi̇r",
+        "given_name": "buğra",
+        "fide_number": "",
+        "raw_fullname": "Buğra Karademi̇r"
     },
     {
         "id": 25,
-        "surname": "jokic",
-        "given_name": "matej",
-        "fide_number": "921227",
-        "raw_fullname": "Matej Jokic"
+        "surname": "darvi̇shi̇",
+        "given_name": "mohammad hossei̇n",
+        "fide_number": "",
+        "raw_fullname": "Mohammad Hossei̇n Darvi̇shi̇"
     },
     {
         "id": 26,
-        "surname": "kapitanic",
-        "given_name": "gabriel",
-        "fide_number": "14588960",
-        "raw_fullname": "Gabriel Kapitanic"
+        "surname": "yildiz",
+        "given_name": "egehan",
+        "fide_number": "",
+        "raw_fullname": "Egehan Yildiz"
     },
     {
         "id": 27,
-        "surname": "karlovic",
-        "given_name": "luka",
-        "fide_number": "79305598",
-        "raw_fullname": "Luka Karlovic"
+        "surname": "ali̇yev",
+        "given_name": "elnur",
+        "fide_number": "",
+        "raw_fullname": "Elnur Ali̇yev"
     },
     {
         "id": 28,
-        "surname": "kartashov",
-        "given_name": "nikita",
-        "fide_number": "14655454",
-        "raw_fullname": "Nikita Kartashov"
+        "surname": "şi̇mşek",
+        "given_name": "ayaz",
+        "fide_number": "",
+        "raw_fullname": "Ayaz Şi̇mşek"
     },
     {
         "id": 29,
-        "surname": "konopatskyi",
-        "given_name": "aleksandr",
-        "fide_number": "14656230",
-        "raw_fullname": "Aleksandr Konopatskyi"
+        "surname": "azi̇mi̇",
+        "given_name": "ami̇r mohammad",
+        "fide_number": "",
+        "raw_fullname": "Ami̇r Mohammad Azi̇mi̇"
     },
     {
         "id": 30,
-        "surname": "kopacki",
-        "given_name": "aleksander",
-        "fide_number": "21044481",
-        "raw_fullname": "Aleksander Kopacki"
+        "surname": "uzdemi̇r",
+        "given_name": "ali̇ poyraz",
+        "fide_number": "",
+        "raw_fullname": "Ali̇ Poyraz Uzdemi̇r"
     },
     {
         "id": 31,
-        "surname": "kostyukovich",
-        "given_name": "ivan",
-        "fide_number": "4008421",
-        "raw_fullname": "Ivan Kostyukovich"
+        "surname": "şeker",
+        "given_name": "gökhan",
+        "fide_number": "",
+        "raw_fullname": "Gökhan Şeker"
     },
     {
         "id": 32,
-        "surname": "kovac",
-        "given_name": "faust",
-        "fide_number": "14595338",
-        "raw_fullname": "Faust Kovac"
+        "surname": "okay",
+        "given_name": "koray",
+        "fide_number": "",
+        "raw_fullname": "Koray Okay"
     },
     {
         "id": 33,
-        "surname": "krajnc",
-        "given_name": "jakob",
-        "fide_number": "14656108",
-        "raw_fullname": "Jakob Krajnc"
+        "surname": "mahdi̇an",
+        "given_name": "anousha",
+        "fide_number": "",
+        "raw_fullname": "Anousha Mahdi̇an"
     },
     {
         "id": 34,
-        "surname": "krajnc",
-        "given_name": "maksim",
-        "fide_number": "14652528",
-        "raw_fullname": "Maksim Krajnc"
+        "surname": "akkara",
+        "given_name": "ömer",
+        "fide_number": "",
+        "raw_fullname": "Ömer Akkara"
     },
     {
         "id": 35,
-        "surname": "krstic",
-        "given_name": "david",
-        "fide_number": "14654946",
-        "raw_fullname": "David Krstic"
+        "surname": "ergi̇n",
+        "given_name": "şahi̇n",
+        "fide_number": "",
+        "raw_fullname": "Şahi̇n Ergi̇n"
     },
     {
         "id": 36,
-        "surname": "larion",
-        "given_name": "iustin",
-        "fide_number": "42213126",
-        "raw_fullname": "Iustin Larion"
+        "surname": "dargali",
+        "given_name": "hakan",
+        "fide_number": "",
+        "raw_fullname": "Hakan Dargali"
     },
     {
         "id": 37,
-        "surname": "levacic",
-        "given_name": "maks",
-        "fide_number": "14667347",
-        "raw_fullname": "Maks Levacic"
+        "surname": "mohandesi̇",
+        "given_name": "shahi̇n",
+        "fide_number": "",
+        "raw_fullname": "Shahi̇n Mohandesi̇"
     },
     {
         "id": 38,
-        "surname": "levacic",
-        "given_name": "matic",
-        "fide_number": "14661144",
-        "raw_fullname": "Matic Levacic"
+        "surname": "tütüncü",
+        "given_name": "ali̇",
+        "fide_number": "",
+        "raw_fullname": "Ali̇ Tütüncü"
     },
     {
         "id": 39,
-        "surname": "li",
-        "given_name": "changxing",
-        "fide_number": "17020182",
-        "raw_fullname": "Changxing Li"
+        "surname": "özsakallioğlu",
+        "given_name": "akin",
+        "fide_number": "",
+        "raw_fullname": "Akin Özsakallioğlu"
     },
     {
         "id": 40,
-        "surname": "li",
-        "given_name": "yunqi",
-        "fide_number": "34610618",
-        "raw_fullname": "Yunqi Li"
+        "surname": "akdaş",
+        "given_name": "emre",
+        "fide_number": "",
+        "raw_fullname": "Emre Akdaş"
     },
     {
         "id": 41,
-        "surname": "marton-john",
-        "given_name": "almos kiran",
-        "fide_number": "17013135",
-        "raw_fullname": "Almos Kiran Marton-John"
+        "surname": "şalci",
+        "given_name": "aytuğ celal",
+        "fide_number": "",
+        "raw_fullname": "Aytuğ Celal Şalci"
     },
     {
         "id": 42,
-        "surname": "mihic",
-        "given_name": "peter",
-        "fide_number": "14655993",
-        "raw_fullname": "Peter Mihic"
+        "surname": "konduk",
+        "given_name": "beki̇r sami̇",
+        "fide_number": "",
+        "raw_fullname": "Beki̇r Sami̇ Konduk"
     },
     {
         "id": 43,
-        "surname": "minga-nagy",
-        "given_name": "abel inti",
-        "fide_number": "17014298",
-        "raw_fullname": "Abel Inti Minga-Nagy"
+        "surname": "demi̇rkan",
+        "given_name": "mustafa",
+        "fide_number": "",
+        "raw_fullname": "Mustafa Demi̇rkan"
     },
     {
         "id": 44,
-        "surname": "mitrovic",
-        "given_name": "vasilije",
-        "fide_number": "16509714",
-        "raw_fullname": "Vasilije Mitrovic"
+        "surname": "serbes",
+        "given_name": "gökay",
+        "fide_number": "",
+        "raw_fullname": "Gökay Serbes"
     },
     {
         "id": 45,
-        "surname": "mueller",
-        "given_name": "konstantin",
-        "fide_number": "34661778",
-        "raw_fullname": "Konstantin Mueller"
+        "surname": "özkan",
+        "given_name": "kaan",
+        "fide_number": "",
+        "raw_fullname": "Kaan Özkan"
     },
     {
         "id": 46,
-        "surname": "osinchuk",
-        "given_name": "luka",
-        "fide_number": "34179119",
-        "raw_fullname": "Luka Osinchuk"
+        "surname": "akkuş",
+        "given_name": "muhammed ali̇",
+        "fide_number": "",
+        "raw_fullname": "Muhammed Ali̇ Akkuş"
     },
     {
         "id": 47,
-        "surname": "osmolovskii",
-        "given_name": "nikita",
-        "fide_number": "4009029",
-        "raw_fullname": "Nikita Osmolovskii"
+        "surname": "bi̇ngül",
+        "given_name": "muratcan",
+        "fide_number": "",
+        "raw_fullname": "Muratcan Bi̇ngül"
     },
     {
         "id": 48,
-        "surname": "osmolovskii",
-        "given_name": "philipp",
-        "fide_number": "4010345",
-        "raw_fullname": "Philipp Osmolovskii"
+        "surname": "kalinağa",
+        "given_name": "alper",
+        "fide_number": "",
+        "raw_fullname": "Alper Kalinağa"
     },
     {
         "id": 49,
-        "surname": "oz",
-        "given_name": "ege",
-        "fide_number": "26391600",
-        "raw_fullname": "Ege Oz"
+        "surname": "yardimci",
+        "given_name": "can",
+        "fide_number": "",
+        "raw_fullname": "Can Yardimci"
     },
     {
         "id": 50,
-        "surname": "parvu",
-        "given_name": "razvan-george",
-        "fide_number": "1297066",
-        "raw_fullname": "Razvan-George Parvu"
+        "surname": "çeli̇k",
+        "given_name": "ege yi̇ği̇t",
+        "fide_number": "",
+        "raw_fullname": "Ege Yi̇ği̇t Çeli̇k"
     },
     {
         "id": 51,
-        "surname": "pasula",
-        "given_name": "milos",
-        "fide_number": "920870",
-        "raw_fullname": "Milos Pasula"
+        "surname": "bulgurlu",
+        "given_name": "okan",
+        "fide_number": "",
+        "raw_fullname": "Okan Bulgurlu"
     },
     {
         "id": 52,
-        "surname": "pavlovic",
-        "given_name": "aleksej",
-        "fide_number": "922425",
-        "raw_fullname": "Aleksej Pavlovic"
+        "surname": "kolat",
+        "given_name": "ata",
+        "fide_number": "",
+        "raw_fullname": "Ata Kolat"
     },
     {
         "id": 53,
-        "surname": "pavlovic",
-        "given_name": "david",
-        "fide_number": "16509544",
-        "raw_fullname": "David Pavlovic"
+        "surname": "cankurt",
+        "given_name": "arda",
+        "fide_number": "",
+        "raw_fullname": "Arda Cankurt"
     },
     {
         "id": 54,
-        "surname": "peric",
-        "given_name": "david m",
-        "fide_number": "921790",
-        "raw_fullname": "David M Peric"
+        "surname": "karapinar",
+        "given_name": "yalin",
+        "fide_number": "",
+        "raw_fullname": "Yalin Karapinar"
     },
     {
         "id": 55,
-        "surname": "perunovic",
-        "given_name": "uros",
-        "fide_number": "921545",
-        "raw_fullname": "Uros Perunovic"
+        "surname": "çatal",
+        "given_name": "uktenur",
+        "fide_number": "",
+        "raw_fullname": "Uktenur Çatal"
     },
     {
         "id": 56,
-        "surname": "puhalo",
-        "given_name": "damir",
-        "fide_number": "79303447",
-        "raw_fullname": "Damir Puhalo"
+        "surname": "öz",
+        "given_name": "ege",
+        "fide_number": "",
+        "raw_fullname": "Ege Öz"
     },
     {
         "id": 57,
-        "surname": "puhalo",
-        "given_name": "robert",
-        "fide_number": "79303455",
-        "raw_fullname": "Robert Puhalo"
+        "surname": "kalemler",
+        "given_name": "kaan",
+        "fide_number": "",
+        "raw_fullname": "Kaan Kalemler"
     },
     {
         "id": 58,
-        "surname": "radovic",
-        "given_name": "koca",
-        "fide_number": "16509846",
-        "raw_fullname": "Koca Radovic"
+        "surname": "kuşluvan",
+        "given_name": "yekateri̇na",
+        "fide_number": "",
+        "raw_fullname": "Yekateri̇na Kuşluvan"
     },
     {
         "id": 59,
-        "surname": "rusu",
-        "given_name": "lucas",
-        "fide_number": "42206472",
-        "raw_fullname": "Lucas Rusu"
+        "surname": "akat",
+        "given_name": "eli̇fnaz",
+        "fide_number": "",
+        "raw_fullname": "Eli̇fnaz Akat"
     },
     {
         "id": 60,
-        "surname": "sahin",
-        "given_name": "bora",
-        "fide_number": "51680491",
-        "raw_fullname": "Bora Sahin"
+        "surname": "onur",
+        "given_name": "çi̇ğdem",
+        "fide_number": "",
+        "raw_fullname": "Çi̇ğdem Onur"
     },
     {
         "id": 61,
-        "surname": "sahin",
-        "given_name": "sarp",
-        "fide_number": "51605066",
-        "raw_fullname": "Sarp Sahin"
+        "surname": "yilmazer",
+        "given_name": "emi̇r arda",
+        "fide_number": "",
+        "raw_fullname": "Emi̇r Arda Yilmazer"
     },
     {
         "id": 62,
-        "surname": "salihbegovic",
-        "given_name": "danin",
-        "fide_number": "14439719",
-        "raw_fullname": "Danin Salihbegovic"
+        "surname": "öztürk",
+        "given_name": "efe",
+        "fide_number": "",
+        "raw_fullname": "Efe Öztürk"
     },
     {
         "id": 63,
-        "surname": "seyns",
-        "given_name": "odilon",
-        "fide_number": "269131",
-        "raw_fullname": "Odilon Seyns"
+        "surname": "akyüz",
+        "given_name": "kerem arhan",
+        "fide_number": "",
+        "raw_fullname": "Kerem Arhan Akyüz"
     },
     {
         "id": 64,
-        "surname": "shen",
-        "given_name": "tingrui",
-        "fide_number": "34603441",
-        "raw_fullname": "Tingrui Shen"
+        "surname": "gürbüz",
+        "given_name": "bayram",
+        "fide_number": "",
+        "raw_fullname": "Bayram Gürbüz"
     },
     {
         "id": 65,
-        "surname": "sheng",
-        "given_name": "ming",
-        "fide_number": "34605258",
-        "raw_fullname": "Ming Sheng"
+        "surname": "kaya",
+        "given_name": "enes",
+        "fide_number": "",
+        "raw_fullname": "Enes Kaya"
     },
     {
         "id": 66,
-        "surname": "shevtsov",
-        "given_name": "egor",
-        "fide_number": "16510801",
-        "raw_fullname": "Egor Shevtsov"
+        "surname": "bayrakoğlu",
+        "given_name": "çinar",
+        "fide_number": "",
+        "raw_fullname": "Çinar Bayrakoğlu"
     },
     {
         "id": 67,
-        "surname": "solinskyi",
-        "given_name": "dmytro",
-        "fide_number": "34166319",
-        "raw_fullname": "Dmytro Solinskyi"
+        "surname": "şahi̇n",
+        "given_name": "ata sarp",
+        "fide_number": "",
+        "raw_fullname": "Ata Sarp Şahi̇n"
     },
     {
         "id": 68,
-        "surname": "tomazin kosorok",
-        "given_name": "tadej",
-        "fide_number": "14656183",
-        "raw_fullname": "Tadej Tomazin Kosorok"
+        "surname": "zeyrek",
+        "given_name": "ayaz",
+        "fide_number": "",
+        "raw_fullname": "Ayaz Zeyrek"
     },
     {
         "id": 69,
-        "surname": "van dooren",
-        "given_name": "robbe",
-        "fide_number": "290556",
-        "raw_fullname": "Robbe Van Dooren"
+        "surname": "köseoğlu",
+        "given_name": "ömer umut",
+        "fide_number": "",
+        "raw_fullname": "Ömer Umut Köseoğlu"
     },
     {
         "id": 70,
-        "surname": "van heinsbergen",
-        "given_name": "benjamin",
-        "fide_number": "284793",
-        "raw_fullname": "Benjamin Van Heinsbergen"
+        "surname": "karacan",
+        "given_name": "arda tuna",
+        "fide_number": "",
+        "raw_fullname": "Arda Tuna Karacan"
     },
     {
         "id": 71,
-        "surname": "van heinsbergen",
-        "given_name": "jonathan",
-        "fide_number": "276219",
-        "raw_fullname": "Jonathan Van Heinsbergen"
+        "surname": "büker",
+        "given_name": "muhi̇tti̇n",
+        "fide_number": "",
+        "raw_fullname": "Muhi̇tti̇n Büker"
     },
     {
         "id": 72,
-        "surname": "verbic",
-        "given_name": "jan",
-        "fide_number": "14655330",
-        "raw_fullname": "Jan Verbic"
+        "surname": "sadik",
+        "given_name": "muhammed selim",
+        "fide_number": "",
+        "raw_fullname": "Muhammed Selim Sadik"
     },
     {
         "id": 73,
-        "surname": "zivic",
-        "given_name": "luka",
-        "fide_number": "14595265",
-        "raw_fullname": "Luka Zivic"
+        "surname": "urun",
+        "given_name": "si̇na mete",
+        "fide_number": "",
+        "raw_fullname": "Si̇na Mete Urun"
+    },
+    {
+        "id": 74,
+        "surname": "asilkefeli̇",
+        "given_name": "meti̇n",
+        "fide_number": "",
+        "raw_fullname": "Meti̇n Asilkefeli̇"
+    },
+    {
+        "id": 75,
+        "surname": "uzuner",
+        "given_name": "tufan can",
+        "fide_number": "",
+        "raw_fullname": "Tufan Can Uzuner"
+    },
+    {
+        "id": 76,
+        "surname": "soyer",
+        "given_name": "deni̇z",
+        "fide_number": "",
+        "raw_fullname": "Deni̇z Soyer"
+    },
+    {
+        "id": 77,
+        "surname": "ersoy",
+        "given_name": "ahmet",
+        "fide_number": "",
+        "raw_fullname": "Ahmet Ersoy"
+    },
+    {
+        "id": 78,
+        "surname": "dölek",
+        "given_name": "gökalp deni̇z",
+        "fide_number": "",
+        "raw_fullname": "Gökalp Deni̇z Dölek"
+    },
+    {
+        "id": 79,
+        "surname": "şeker",
+        "given_name": "çinar",
+        "fide_number": "",
+        "raw_fullname": "Çinar Şeker"
+    },
+    {
+        "id": 80,
+        "surname": "demi̇rçi̇n",
+        "given_name": "kasim",
+        "fide_number": "",
+        "raw_fullname": "Kasim Demi̇rçi̇n"
+    },
+    {
+        "id": 81,
+        "surname": "gece",
+        "given_name": "uğur",
+        "fide_number": "",
+        "raw_fullname": "Uğur Gece"
     }
 ]
 
 # Global variables for custom analysis
+# Thread-safe globals
 custom_players_data = []
 custom_analysis_progress = {
     "done": 0,
@@ -540,23 +600,28 @@ custom_analysis_progress = {
     "current_player": None
 }
 custom_analysis_thread = None
+custom_data_lock = Lock()  # Critical addition!
 
 def initialize_custom_players():
     """Initialize the custom players list with static data"""
     global custom_players_data
-    custom_players_data = []
     
-    for player_data in STATIC_PLAYERS:
-        player = {
-            "id": player_data["id"],
-            "surname": player_data["surname"],
-            "given_name": player_data["given_name"],
-            "fide_number": player_data["fide_number"],
-            "raw_fullname": player_data["raw_fullname"],
-            "chessbase_stats": None,
-            "analysis_status": "pending"  # pending, analyzing, completed, failed
-        }
-        custom_players_data.append(player)
+    with custom_data_lock:
+        custom_players_data = []
+        
+        for player_data in STATIC_PLAYERS:
+            player = {
+                "id": player_data["id"],
+                "surname": player_data["surname"],
+                "given_name": player_data["given_name"],
+                "fide_number": player_data["fide_number"],
+                "raw_fullname": player_data["raw_fullname"],
+                "chessbase_stats": None,
+                "analysis_status": "pending"  # pending, analyzing, completed, failed
+            }
+            custom_players_data.append(player)
+        
+        print(f"Initialized {len(custom_players_data)} custom players")
 
 def scrape_additional_stats(stats_url):
     """
@@ -645,12 +710,85 @@ def enhanced_scrape_chessbase_data(surname, given_name, fide_number=None):
     except Exception as e:
         return {"error": str(e)}
 
-def analyze_custom_player(player):
+# Thread-safe globals
+custom_players_data = []
+custom_analysis_progress = {
+    "done": 0,
+    "total": 0,
+    "analysis_active": False,
+    "current_player": None
+}
+custom_analysis_thread = None
+custom_data_lock = Lock()  # Critical addition!
+
+def initialize_custom_players():
+    """Initialize the custom players list with static data"""
+    global custom_players_data
+    
+    with custom_data_lock:
+        custom_players_data = []
+        
+        for player_data in STATIC_PLAYERS:
+            player = {
+                "id": player_data["id"],
+                "surname": player_data["surname"],
+                "given_name": player_data["given_name"],
+                "fide_number": player_data["fide_number"],
+                "raw_fullname": player_data["raw_fullname"],
+                "chessbase_stats": None,
+                "analysis_status": "pending"  # pending, analyzing, completed, failed
+            }
+            custom_players_data.append(player)
+        
+        print(f"Initialized {len(custom_players_data)} custom players")
+
+def get_player_by_id(player_id):
+    """Thread-safe player lookup"""
+    with custom_data_lock:
+        for player in custom_players_data:
+            if player["id"] == player_id:
+                return copy.deepcopy(player)  # Return a copy to avoid reference issues
+        return None
+
+def update_player_status(player_id, status, stats=None):
+    """Thread-safe player update"""
+    with custom_data_lock:
+        for player in custom_players_data:
+            if player["id"] == player_id:
+                player["analysis_status"] = status
+                if stats is not None:
+                    player["chessbase_stats"] = stats
+                print(f"Updated player {player_id}: {status}")
+                return True
+        return False
+
+def update_progress(done=None, current_player=None, analysis_active=None):
+    """Thread-safe progress update"""
+    with custom_data_lock:
+        if done is not None:
+            custom_analysis_progress["done"] = done
+        if current_player is not None:
+            custom_analysis_progress["current_player"] = current_player
+        if analysis_active is not None:
+            custom_analysis_progress["analysis_active"] = analysis_active
+        
+        print(f"Progress: {custom_analysis_progress['done']}/{custom_analysis_progress['total']} - Active: {custom_analysis_progress['analysis_active']}")
+
+def analyze_custom_player(player_id):
     """
     Analyze a single custom player and update their data.
+    Uses player_id instead of player object to avoid reference issues.
     """
-    player["analysis_status"] = "analyzing"
-    custom_analysis_progress["current_player"] = player["raw_fullname"]
+    player = get_player_by_id(player_id)
+    if not player:
+        print(f"Player {player_id} not found for analysis")
+        return
+    
+    print(f"Starting analysis for player {player_id}: {player['raw_fullname']}")
+    
+    # Update status to analyzing
+    update_player_status(player_id, "analyzing")
+    update_progress(current_player=player["raw_fullname"])
     
     try:
         stats = enhanced_scrape_chessbase_data(
@@ -660,40 +798,55 @@ def analyze_custom_player(player):
         )
         
         if "error" not in stats:
-            player["chessbase_stats"] = stats
-            player["analysis_status"] = "completed"
+            update_player_status(player_id, "completed", stats)
+            print(f"Successfully analyzed player {player_id}")
         else:
-            player["chessbase_stats"] = stats  # Save the error for debugging
-            player["analysis_status"] = "failed"
+            update_player_status(player_id, "failed", stats)
+            print(f"Analysis failed for player {player_id}: {stats.get('error', 'Unknown error')}")
             
     except Exception as e:
-        player["chessbase_stats"] = {"error": str(e)}
-        player["analysis_status"] = "failed"
+        error_stats = {"error": str(e)}
+        update_player_status(player_id, "failed", error_stats)
+        print(f"Exception during analysis of player {player_id}: {e}")
     
-    custom_analysis_progress["done"] += 1
-    custom_analysis_progress["current_player"] = None
+    # Update progress
+    with custom_data_lock:
+        current_done = custom_analysis_progress["done"] + 1
+        update_progress(done=current_done, current_player=None)
 
 def analyze_all_custom_players():
     """
     Background task to analyze all custom players.
+    Now uses player IDs to avoid reference issues.
     """
-    global custom_analysis_progress
+    print("Starting background analysis of all custom players")
     
     try:
-        for player in custom_players_data:
-            if not custom_analysis_progress["analysis_active"]:
-                break  # Stop if analysis was cancelled
+        # Get list of player IDs to analyze
+        with custom_data_lock:
+            player_ids = [player["id"] for player in custom_players_data if player["analysis_status"] == "pending"]
+        
+        print(f"Found {len(player_ids)} players to analyze")
+        
+        for player_id in player_ids:
+            # Check if analysis should continue
+            with custom_data_lock:
+                should_continue = custom_analysis_progress["analysis_active"]
             
-            analyze_custom_player(player)
+            if not should_continue:
+                print("Analysis stopped by user")
+                break
+            
+            analyze_custom_player(player_id)
             
             # Small delay to prevent overwhelming the server
-            time.sleep(2)
+            time.sleep(3)  # Increased delay
             
     except Exception as e:
         print(f"Error in analyze_all_custom_players: {e}")
     finally:
-        custom_analysis_progress["analysis_active"] = False
-        custom_analysis_progress["current_player"] = None
+        update_progress(analysis_active=False, current_player=None)
+        print("Background analysis completed")
 
 # Routes for Custom Analysis
 
@@ -703,15 +856,22 @@ def healthcheck():
         "Status": "Working"
     }) 
 
+# Updated Routes
+
 @app.route("/api/custom", methods=["GET"])
 def get_custom_analysis():
     """
     Get the current state of custom player analysis.
     """
+    with custom_data_lock:
+        # Return deep copies to avoid reference issues
+        players_copy = copy.deepcopy(custom_players_data)
+        progress_copy = copy.deepcopy(custom_analysis_progress)
+    
     return jsonify({
-        "players": custom_players_data,
-        "progress": custom_analysis_progress,
-        "total_players": len(custom_players_data)
+        "players": players_copy,
+        "progress": progress_copy,
+        "total_players": len(players_copy)
     })
 
 @app.route("/api/custom/start", methods=["POST"])
@@ -719,30 +879,33 @@ def start_custom_analysis():
     """
     Start the custom player analysis process.
     """
-    global custom_analysis_thread, custom_analysis_progress
+    global custom_analysis_thread
     
-    if custom_analysis_progress["analysis_active"]:
-        return jsonify({"error": "Analysis is already running"}), 400
-    
-    # Initialize players if not already done
-    if not custom_players_data:
-        initialize_custom_players()
-    
-    # Reset progress
-    custom_analysis_progress.update({
-        "done": 0,
-        "total": len(custom_players_data),
-        "analysis_active": True,
-        "current_player": None
-    })
-    
-    # Reset all player statuses to pending
-    for player in custom_players_data:
-        player["analysis_status"] = "pending"
-        player["chessbase_stats"] = None
+    with custom_data_lock:
+        if custom_analysis_progress["analysis_active"]:
+            return jsonify({"error": "Analysis is already running"}), 400
+        
+        # Initialize players if not already done
+        if not custom_players_data:
+            initialize_custom_players()
+        
+        # Reset progress
+        custom_analysis_progress.update({
+            "done": 0,
+            "total": len(custom_players_data),
+            "analysis_active": True,
+            "current_player": None
+        })
+        
+        # Reset all player statuses to pending
+        for player in custom_players_data:
+            player["analysis_status"] = "pending"
+            player["chessbase_stats"] = None
+        
+        print(f"Starting analysis of {len(custom_players_data)} players")
     
     # Start background thread
-    custom_analysis_thread = threading.Thread(target=analyze_all_custom_players)
+    custom_analysis_thread = threading.Thread(target=analyze_all_custom_players, daemon=True)
     custom_analysis_thread.start()
     
     return jsonify({
@@ -755,13 +918,14 @@ def stop_custom_analysis():
     """
     Stop the custom player analysis process.
     """
-    global custom_analysis_progress
-    
-    if not custom_analysis_progress["analysis_active"]:
-        return jsonify({"error": "No analysis is currently running"}), 400
-    
-    custom_analysis_progress["analysis_active"] = False
-    custom_analysis_progress["current_player"] = None
+    with custom_data_lock:
+        if not custom_analysis_progress["analysis_active"]:
+            return jsonify({"error": "No analysis is currently running"}), 400
+        
+        custom_analysis_progress["analysis_active"] = False
+        custom_analysis_progress["current_player"] = None
+        
+        print("Analysis stop requested")
     
     return jsonify({"message": "Analysis stopped"})
 
@@ -770,7 +934,7 @@ def get_custom_player(player_id):
     """
     Get detailed information about a specific custom player.
     """
-    player = next((p for p in custom_players_data if p["id"] == player_id), None)
+    player = get_player_by_id(player_id)
     if not player:
         return jsonify({"error": f"No player found with id {player_id}"}), 404
     
@@ -781,18 +945,19 @@ def reset_custom_analysis():
     """
     Reset the custom analysis data.
     """
-    global custom_analysis_progress
-    
-    if custom_analysis_progress["analysis_active"]:
-        return jsonify({"error": "Cannot reset while analysis is running"}), 400
-    
-    initialize_custom_players()
-    custom_analysis_progress.update({
-        "done": 0,
-        "total": len(custom_players_data),
-        "analysis_active": False,
-        "current_player": None
-    })
+    with custom_data_lock:
+        if custom_analysis_progress["analysis_active"]:
+            return jsonify({"error": "Cannot reset while analysis is running"}), 400
+        
+        initialize_custom_players()
+        custom_analysis_progress.update({
+            "done": 0,
+            "total": len(custom_players_data),
+            "analysis_active": False,
+            "current_player": None
+        })
+        
+        print("Custom analysis reset")
     
     return jsonify({
         "message": "Custom analysis reset",
@@ -1359,4 +1524,5 @@ def get_tournaments():
 
 if __name__ == "__main__":
     initialize_custom_players()
-    print("Players initialized")
+    print("Custom players initialized")
+    app.run(debug=False)  # Debug=False for production
